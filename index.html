@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>6팀 대항 메모리 게임</title>
+  <!-- 모바일 환경에서 화면 크기를 맞추기 위한 뷰포트 설정 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    /********************************************************************
+     * 전역 스타일
+     ********************************************************************/
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: sans-serif;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden; /* 필요 시 스크롤 숨김 or 자동화 */
+    }
+
+    /********************************************************************
+     * 상단/하단 팀 영역 스타일
+     ********************************************************************/
+    /* 상단 3팀, 하단 3팀을 각각 가로로 배치 */
+    #top-teams, #bottom-teams {
+      flex: 0 0 auto; /* 높이 고정(자동) */
+      display: flex;
+      justify-content: space-around; /* 남은 공간을 양쪽으로 균등 분배 */
+      align-items: center;
+      height: 15%; /* 상단/하단 영역 높이를 15%로 설정 (상황 맞춰 조절 가능) */
+      background: #f0f0f0;
+      padding: 5px;
+    }
+
+    /* 팀 원형 표시 */
+    .team-circle {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 2px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-weight: bold;
+      font-size: 14px;
+      padding: 5px;
+    }
+
+    /********************************************************************
+     * 가운데 메모리 카드 게임 영역
+     ********************************************************************/
+    #board-wrapper {
+      flex: 1 1 auto; /* 남은 공간을 전부 차지 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+      position: relative;
+    }
+
+    /* 실제 카드가 들어갈 영역 */
+    #game-board {
+      display: grid;
+      /* 카드 배치를 위해 4열(또는 3열~5열)로 설정, 필요에 맞게 조절 */
+      grid-template-columns: repeat(4, 120px);
+      gap: 10px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    /* 결과 메시지 (예: 게임 완료 등) */
+    #message {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    /********************************************************************
+     * 카드 스타일
+     ********************************************************************/
+    .card {
+      width: 120px;
+      height: 80px;
+      perspective: 800px;
+      cursor: pointer;
+    }
+    .card-inner {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transition: transform 0.6s;
+      transform-style: preserve-3d;
+    }
+    /* flipped 상태: 뒷면이 보이도록 180도 회전 */
+    .flipped .card-inner {
+      transform: rotateY(180deg);
+    }
+
+    /* 카드 앞/뒷면 */
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 14px;
+      padding: 5px;
+    }
+    .card-front {
+      background: #fff;
+      color: #000;
+      border: 2px solid #ccc;
+    }
+    .card-back {
+      background: #0d6efd;
+      color: #fff;
+      transform: rotateY(180deg);
+    }
+
+    /* 매칭된 카드 숨김 처리 */
+    .matched {
+      visibility: hidden;
+    }
+  </style>
+</head>
+<body>
+  <!-- 상단 3팀 -->
+  <div id="top-teams">
+    <div class="team-circle" id="team0"></div>
+    <div class="team-circle" id="team1"></div>
+    <div class="team-circle" id="team2"></div>
+  </div>
+  
+  <!-- 가운데 게임 영역 -->
+  <div id="board-wrapper">
+    <div id="message"></div>
+    <div id="game-board"></div>
+  </div>
+
+  <!-- 하단 3팀 -->
+  <div id="bottom-teams">
+    <div class="team-circle" id="team3"></div>
+    <div class="team-circle" id="team4"></div>
+    <div class="team-circle" id="team5"></div>
+  </div>
+
+  <script>
+    /**************************************************************************
+     * 1. 팀 정보: 6팀 (이름, 색상, 점수)
+     **************************************************************************/
+    const teams = [
+      { name: "팀 1", color: "red",    score: 0 },
+      { name: "팀 2", color: "orange", score: 0 },
+      { name: "팀 3", color: "yellow", score: 0 },
+      { name: "팀 4", color: "green",  score: 0 },
+      { name: "팀 5", color: "blue",   score: 0 },
+      { name: "팀 6", color: "purple", score: 0 },
+    ];
+    let currentTeamIndex = 0; // 현재 턴인 팀 인덱스
+
+    /**************************************************************************
+     * 2. 카드 데이터 (같은 의미, 같은 id)
+     **************************************************************************/
+    const cardData = [
+      { id: 1, text: "It's raining cats and dogs." },
+      { id: 1, text: "It's raining a lot." },
+
+      { id: 2, text: "You're pulling my leg." },
+      { id: 2, text: "You're joking." },
+
+      { id: 3, text: "We pigged out." },
+      { id: 3, text: "We ate a lot." },
+
+      { id: 4, text: "Don't make a long face." },
+      { id: 4, text: "Don't feel sad." },
+
+      { id: 5, text: "It's not my cup of tea." },
+      { id: 5, text: "I don't like it." },
+
+      { id: 6, text: "I'm in hot water." },
+      { id: 6, text: "I'm in trouble." },
+
+      { id: 7, text: "I feel under the weather." },
+      { id: 7, text: "I don't feel well." },
+
+      { id: 8, text: "He and I see eye to eye." },
+      { id: 8, text: "He and I agree." },
+
+      { id: 9, text: "I'll keep my fingers crossed for you." },
+      { id: 9, text: "I wish you good luck." },
+
+      { id: 10, text: "It's a piece of cake." },
+      { id: 10, text: "It's easy." },
+
+      { id: 11, text: "I'll keep in touch." },
+      { id: 11, text: "I'll call you or write to you." },
+    ];
+    const totalPairs = cardData.length / 2;
+    let matchedCount = 0; // 매칭된 쌍의 수
+
+    /**************************************************************************
+     * 3. 메모리 게임 상태 변수
+     **************************************************************************/
+    let firstCard = null;
+    let secondCard = null;
+    let lockBoard = false;   // 짧은 시간 동안 클릭 잠금
+
+    /**************************************************************************
+     * 4. 팀 표시 업데이트
+     *    - 현재 턴인 팀은 팀 고유 색으로 배경 표시, 다른 팀은 회색
+     **************************************************************************/
+    function updateTeamsDisplay() {
+      teams.forEach((team, i) => {
+        const el = document.getElementById(`team${i}`);
+        // 팀 이름과 점수를 표시
+        el.textContent = team.name + "\n" + team.score + "점";
+        el.style.whiteSpace = "pre-line";  // 줄바꿈을 위해
+
+        if (i === currentTeamIndex) {
+          el.style.backgroundColor = team.color;
+          el.style.color = "#fff";
+        } else {
+          el.style.backgroundColor = "#aaa";
+          el.style.color = "#000";
+        }
+      });
+    }
+
+    /**************************************************************************
+     * 5. 턴 교체 함수
+     *    - 이번 규칙: "맞춘 팀은 계속 진행, 틀렸을 때만 턴을 넘긴다."
+     *    - 따라서 턴 교체는 '틀렸을 때만' 호출
+     **************************************************************************/
+    function nextTeamTurn() {
+      currentTeamIndex = (currentTeamIndex + 1) % teams.length;
+      updateTeamsDisplay();
+    }
+
+    /**************************************************************************
+     * 6. 카드 섞기 (Fisher-Yates)
+     **************************************************************************/
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    /**************************************************************************
+     * 7. 보드 생성
+     **************************************************************************/
+    function createBoard() {
+      const gameBoard = document.getElementById("game-board");
+      gameBoard.innerHTML = "";
+
+      const shuffledCards = shuffle([...cardData]);
+      shuffledCards.forEach((cardInfo, index) => {
+        // 카드 컨테이너
+        const card = document.createElement("div");
+        card.classList.add("card", "flipped");  // 초기에는 뒷면 보이도록
+
+        // 내부 회전 컨테이너
+        const cardInner = document.createElement("div");
+        cardInner.classList.add("card-inner");
+
+        // 앞면
+        const cardFront = document.createElement("div");
+        cardFront.classList.add("card-face", "card-front");
+        cardFront.textContent = cardInfo.text;
+
+        // 뒷면 (번호 표시)
+        const cardBack = document.createElement("div");
+        cardBack.classList.add("card-face", "card-back");
+        cardBack.textContent = index + 1;
+
+        cardInner.appendChild(cardFront);
+        cardInner.appendChild(cardBack);
+        card.appendChild(cardInner);
+
+        // 카드 클릭 시 뒤집기
+        card.addEventListener("click", () => flipCard(card, cardInfo));
+
+        gameBoard.appendChild(card);
+      });
+    }
+
+    /**************************************************************************
+     * 8. 카드 뒤집기 로직
+     **************************************************************************/
+    function flipCard(card, cardInfo) {
+      if (lockBoard) return;
+      if (!card.classList.contains("flipped")) return; // 이미 앞면이면 무시
+
+      // 뒷면에서 앞면으로
+      card.classList.remove("flipped");
+
+      if (!firstCard) {
+        firstCard = card;
+        firstCard.cardInfo = cardInfo;
+      } else {
+        secondCard = card;
+        secondCard.cardInfo = cardInfo;
+        checkForMatch();
+      }
+    }
+
+    /**************************************************************************
+     * 9. 매칭 판정
+     **************************************************************************/
+    function checkForMatch() {
+      lockBoard = true;
+      const isMatch = firstCard.cardInfo.id === secondCard.cardInfo.id;
+
+      if (isMatch) {
+        // 맞춘 경우: 점수 증가 & 같은 팀 계속 진행
+        teams[currentTeamIndex].score++;
+        updateTeamsDisplay();
+        disableCards();
+        matchedCount++;
+
+        if (matchedCount === totalPairs) {
+          document.getElementById("message").textContent = 
+            "축하합니다! 모든 카드를 맞추셨습니다.";
+        }
+      } else {
+        // 틀린 경우: 다음 팀으로 턴 교체
+        unflipCards();
+        nextTeamTurn();
+      }
+    }
+
+    /**************************************************************************
+     * 10. 매치 시 카드 고정 (또는 숨기기)
+     **************************************************************************/
+    function disableCards() {
+      firstCard.classList.add("matched");
+      secondCard.classList.add("matched");
+      resetBoard();
+      // 여기서는 턴 교체 없이 동일 팀이 계속 진행
+    }
+
+    /**************************************************************************
+     * 11. 불일치 시 카드 다시 뒤집기
+     **************************************************************************/
+    function unflipCards() {
+      setTimeout(() => {
+        firstCard.classList.add("flipped");
+        secondCard.classList.add("flipped");
+        resetBoard();
+      }, 1000);
+    }
+
+    /**************************************************************************
+     * 12. 상태 초기화
+     **************************************************************************/
+    function resetBoard() {
+      [firstCard, secondCard] = [null, null];
+      lockBoard = false;
+    }
+
+    /**************************************************************************
+     * 13. 초기화
+     **************************************************************************/
+    window.addEventListener("DOMContentLoaded", () => {
+      // 초기 화면에 팀 표시
+      updateTeamsDisplay();
+      // 카드 배치
+      createBoard();
+    });
+  </script>
+</body>
+</html>
