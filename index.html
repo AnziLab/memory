@@ -14,17 +14,19 @@
     body {
       font-family: sans-serif;
       width: 100vw;
-      height: 100vh;
+      min-height: 100vh;
+      /* 화면이 잘릴 경우 스크롤할 수 있도록 */
+      overflow-y: auto;
+      background: #eee;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
-      background: #eee;
     }
     
     /* 플레이어 수 선택 오버레이 */
     #playerSelectOverlay {
       position: fixed;
-      top: 0; left: 0;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
       background: rgba(0, 0, 0, 0.6);
@@ -35,31 +37,34 @@
       z-index: 10;
       color: #fff;
     }
-    #playerSelectOverlay select, 
+    #playerSelectOverlay select,
     #playerSelectOverlay button {
-      font-size: 18px;
+      font-size: 16px;
       padding: 10px 15px;
       margin: 10px;
     }
     
-    /* 팀 영역 */
+    /*************************************************************************
+     * 팀 영역 (한 줄로 표시)
+     *************************************************************************/
     #teamsArea {
+      /* 상단 공간 최소화 */
       flex: 0 0 auto;
       display: flex;
-      flex-direction: column;
       justify-content: center;
       align-items: center;
-      margin: 5px;
+      margin: 5px 0;
+      padding: 5px 0;
+      background: #f0f0f0;
     }
     .team-row {
       display: flex;
       justify-content: center;
       align-items: center;
-      margin: 5px 0;
     }
     .team-circle {
-      width: 80px;
-      height: 80px;
+      width: 50px;
+      height: 50px;
       border-radius: 50%;
       border: 2px solid #333;
       display: flex;
@@ -67,12 +72,15 @@
       justify-content: center;
       text-align: center;
       font-weight: bold;
-      font-size: 14px;
+      font-size: 12px;
+      margin: 0 3px;
       padding: 5px;
-      margin: 0 5px;
+      white-space: pre-line;
     }
     
-    /* 중앙 게임 보드 영역 */
+    /*************************************************************************
+     * 게임 보드 영역
+     *************************************************************************/
     #board-wrapper {
       flex: 1 1 auto;
       display: flex;
@@ -80,31 +88,34 @@
       justify-content: center;
       background: #fff;
       position: relative;
-      padding: 10px;
+      padding: 5px;
     }
     #game-board {
       display: grid;
-      grid-template-columns: repeat(4, 300px);
-      gap: 10px;
-      padding: 10px;
+      /* 4열이 기본, 가로 공간을 최대로 활용 */
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+      padding: 5px;
       background: rgba(255, 255, 255, 0.9);
       border: 1px solid #ccc;
       border-radius: 8px;
+      width: 95%;
+      max-width: 1200px; /* 큰 화면에서는 최대 1200px까지 */
     }
     #message {
       position: absolute;
-      top: 10px;
+      top: 5px;
       left: 50%;
       transform: translateX(-50%);
-      font-size: 18px;
+      font-size: 16px;
       font-weight: bold;
       color: #333;
     }
     
-    /* 카드 스타일 */
+    /* 카드 스타일 (aspect-ratio로 가로/세로 비율 고정) */
     .card {
-      width: 300px;
-      height: 150px;
+      width: 100%;
+      aspect-ratio: 4 / 1; /* 가로:세로 = 2:1 */
       perspective: 800px;
       cursor: pointer;
     }
@@ -115,6 +126,7 @@
       transition: transform 0.6s;
       transform-style: preserve-3d;
     }
+    /* flipped 클래스가 있으면 뒷면(번호)이 보임 */
     .flipped .card-inner {
       transform: rotateY(180deg);
     }
@@ -128,7 +140,7 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      font-size: 18px;
+      font-size: 1.2em; /* 조금 줄인 폰트 크기 */
       padding: 5px;
     }
     .card-front {
@@ -152,40 +164,18 @@
       animation: blink 0.5s ease-in-out infinite;
     }
     
-    /* 반응형 조정을 위한 미디어 쿼리 (예시) */
-    @media (max-width: 1280px) {
-      #game-board {
-        grid-template-columns: repeat(4, 250px);
-      }
-      .card {
-        width: 250px;
-        height: 130px;
-      }
-      .card-face {
-        font-size: 16px;
-      }
-      .team-circle {
-        width: 60px;
-        height: 60px;
-        font-size: 12px;
-      }
-    }
-    
+    /* 화면이 더 작아질 경우 추가 조정(폰트, 팀 크기) */
     @media (max-width: 800px) {
-      #game-board {
-        grid-template-columns: repeat(4, 200px);
-      }
-      .card {
-        width: 200px;
-        height: 110px;
-      }
-      .card-face {
+      #message {
         font-size: 14px;
       }
       .team-circle {
-        width: 50px;
-        height: 50px;
+        width: 45px;
+        height: 45px;
         font-size: 10px;
+      }
+      .card-face {
+        font-size: 1em;
       }
     }
   </style>
@@ -205,7 +195,7 @@
     <button id="startButton">게임 시작</button>
   </div>
 
-  <!-- 팀 영역 (상단에 한 번에 표시할 수도 있고, 필요에 따라 여러 줄로 분할) -->
+  <!-- 팀 영역 (항상 한 줄로) -->
   <div id="teamsArea"></div>
 
   <!-- 게임 보드 영역 -->
@@ -222,7 +212,7 @@
     let currentTeamIndex = 0; // 현재 턴인 팀 인덱스
     const defaultColors = ["red", "orange", "yellow", "green", "blue", "purple"];
     
-    // 카드 데이터 (각 쌍은 같은 id를 사용)
+    // 카드 데이터 (각 쌍은 같은 id 사용)
     const cardData = [
       { id: 1, text: "It's raining cats and dogs." },
       { id: 1, text: "It's raining a lot." },
@@ -255,61 +245,40 @@
     let lockBoard = false; // 클릭 잠금 상태
 
     /**************************************************************************
-     * 팀 UI 동적 생성: 플레이어 수에 따라 팀 영역 생성
+     * 팀 UI 동적 생성 (항상 한 줄)
      **************************************************************************/
     function generateTeamsUI() {
       const teamsArea = document.getElementById("teamsArea");
       teamsArea.innerHTML = "";
-      let topRow = document.createElement("div");
-      topRow.classList.add("team-row");
-      let bottomRow = document.createElement("div");
-      bottomRow.classList.add("team-row");
+      
+      const row = document.createElement("div");
+      row.classList.add("team-row");
+      
+      teams.forEach((team, i) => {
+        const teamDiv = document.createElement("div");
+        teamDiv.classList.add("team-circle");
+        teamDiv.id = "team" + i;
+        teamDiv.textContent = team.name + "\n" + team.score + "점";
+        
+        // 현재 팀은 지정 색상, 아니면 회색
+        teamDiv.style.backgroundColor = (i === currentTeamIndex) ? team.color : "#aaa";
+        teamDiv.style.color = (i === currentTeamIndex) ? "#fff" : "#000";
+        
+        row.appendChild(teamDiv);
+      });
 
-      // 플레이어 수에 따라 분할: 1~3명이면 상단 한 줄, 4~6명이면 두 줄로 분리
-      if (teams.length <= 3) {
-        teams.forEach((team, i) => {
-          const teamDiv = document.createElement("div");
-          teamDiv.classList.add("team-circle");
-          teamDiv.id = "team" + i;
-          teamDiv.textContent = team.name + "\n" + team.score + "점";
-          teamDiv.style.whiteSpace = "pre-line";
-          // 현재 팀은 고유 색상, 아니면 회색 처리
-          teamDiv.style.backgroundColor = (i === currentTeamIndex) ? team.color : "#aaa";
-          teamDiv.style.color = (i === currentTeamIndex) ? "#fff" : "#000";
-          topRow.appendChild(teamDiv);
-        });
-        teamsArea.appendChild(topRow);
-      } else {
-        // 두 줄로 배치: 상단은 Math.ceil(n/2), 하단은 나머지
-        let topCount = Math.ceil(teams.length / 2);
-        teams.forEach((team, i) => {
-          const teamDiv = document.createElement("div");
-          teamDiv.classList.add("team-circle");
-          teamDiv.id = "team" + i;
-          teamDiv.textContent = team.name + "\n" + team.score + "점";
-          teamDiv.style.whiteSpace = "pre-line";
-          teamDiv.style.backgroundColor = (i === currentTeamIndex) ? team.color : "#aaa";
-          teamDiv.style.color = (i === currentTeamIndex) ? "#fff" : "#000";
-          if (i < topCount) {
-            topRow.appendChild(teamDiv);
-          } else {
-            bottomRow.appendChild(teamDiv);
-          }
-        });
-        teamsArea.appendChild(topRow);
-        teamsArea.appendChild(bottomRow);
-      }
+      teamsArea.appendChild(row);
     }
 
     /**************************************************************************
-     * 팀 디스플레이 업데이트 (팀 UI 재생성)
+     * 팀 디스플레이 업데이트
      **************************************************************************/
     function updateTeamsDisplay() {
       generateTeamsUI();
     }
 
     /**************************************************************************
-     * 턴 교체 함수: 맞춘 팀은 그대로, 오답이면 다음 팀으로
+     * 턴 교체 함수
      **************************************************************************/
     function nextTeamTurn() {
       currentTeamIndex = (currentTeamIndex + 1) % teams.length;
@@ -328,7 +297,7 @@
     }
 
     /**************************************************************************
-     * 게임 보드 생성: 카드 배치
+     * 게임 보드 생성
      **************************************************************************/
     function createBoard() {
       const gameBoard = document.getElementById("game-board");
@@ -337,6 +306,7 @@
       shuffledCards.forEach((cardInfo, index) => {
         const card = document.createElement("div");
         card.classList.add("card", "flipped"); // 초기 상태: 뒷면(번호) 보임
+
         const cardInner = document.createElement("div");
         cardInner.classList.add("card-inner");
 
@@ -352,6 +322,7 @@
         cardInner.appendChild(cardBack);
         card.appendChild(cardInner);
 
+        // 클릭 이벤트
         card.addEventListener("click", () => flipCard(card, cardInfo));
         gameBoard.appendChild(card);
       });
@@ -362,8 +333,8 @@
      **************************************************************************/
     function flipCard(card, cardInfo) {
       if (lockBoard) return;
-      if (!card.classList.contains("flipped")) return; // 이미 앞면이면 무시
-
+      if (!card.classList.contains("flipped")) return;
+      
       card.classList.remove("flipped");
 
       if (!firstCard) {
@@ -377,7 +348,7 @@
     }
 
     /**************************************************************************
-     * 정답 카드 애니메이션: 3초간 깜박이다가 사라지게 함
+     * 매칭 성공 시 애니메이션
      **************************************************************************/
     function animateMatch() {
       firstCard.classList.add("blink");
@@ -392,20 +363,18 @@
     }
 
     /**************************************************************************
-     * 매칭 판정 함수
+     * 매칭 판정
      **************************************************************************/
     function checkForMatch() {
       lockBoard = true;
       const isMatch = firstCard.cardInfo.id === secondCard.cardInfo.id;
-
       if (isMatch) {
         teams[currentTeamIndex].score++;
         updateTeamsDisplay();
         animateMatch();
         matchedCount++;
         if (matchedCount === totalPairs) {
-          const endMsg = "축하합니다! 모든 카드를 맞추셨습니다.";
-          document.getElementById("message").textContent = endMsg;
+          document.getElementById("message").textContent = "축하합니다! 모든 카드를 맞추셨습니다.";
         }
       } else {
         setTimeout(() => {
@@ -418,7 +387,7 @@
     }
 
     /**************************************************************************
-     * 상태 초기화 함수
+     * 게임 보드 상태 초기화
      **************************************************************************/
     function resetBoard() {
       [firstCard, secondCard] = [null, null];
@@ -426,11 +395,10 @@
     }
 
     /**************************************************************************
-     * 플레이어 수 선택 후 게임 시작 함수
+     * 게임 시작 함수
      **************************************************************************/
     function startGame() {
       const playerCount = parseInt(document.getElementById("playerCount").value);
-      // 선택한 플레이어 수만큼 팀 생성
       teams = [];
       for (let i = 0; i < playerCount; i++) {
         teams.push({
@@ -440,16 +408,14 @@
         });
       }
       currentTeamIndex = 0;
-      // 팀 UI 생성
+      matchedCount = 0;
       updateTeamsDisplay();
-      // 플레이어 선택 오버레이 숨기기
       document.getElementById("playerSelectOverlay").style.display = "none";
-      // 게임 보드 생성
       createBoard();
     }
-
+    
     /**************************************************************************
-     * 이벤트 리스너: 시작 버튼 클릭 시 startGame 호출
+     * 이벤트 리스너
      **************************************************************************/
     document.getElementById("startButton").addEventListener("click", startGame);
   </script>
