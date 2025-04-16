@@ -20,7 +20,7 @@
       overflow: hidden;
       background: #eee;
     }
-
+    
     /* 플레이어 수 선택 오버레이 */
     #playerSelectOverlay {
       position: fixed;
@@ -42,7 +42,7 @@
       margin: 10px;
     }
     
-    /* 팀 영역 컨테이너: 상단과 하단 영역 */
+    /* 팀 영역 */
     #teamsArea {
       flex: 0 0 auto;
       display: flex;
@@ -82,10 +82,9 @@
       position: relative;
       padding: 10px;
     }
-    /* 메모리 카드 보드 */
     #game-board {
       display: grid;
-      grid-template-columns: repeat(4, 300px); /* 수정: 카드 가로 길이에 맞춤 */
+      grid-template-columns: repeat(4, 300px);
       gap: 10px;
       padding: 10px;
       background: rgba(255, 255, 255, 0.9);
@@ -104,8 +103,8 @@
     
     /* 카드 스타일 */
     .card {
-      width: 300px;    /* 수정: 가로 크기 증가 */
-      height: 100px;   /* 수정: 높이 약간 증가 */
+      width: 300px;
+      height: 150px;
       perspective: 800px;
       cursor: pointer;
     }
@@ -116,7 +115,6 @@
       transition: transform 0.6s;
       transform-style: preserve-3d;
     }
-    /* flipped 클래스가 있으면 뒷면(번호)이 보임 */
     .flipped .card-inner {
       transform: rotateY(180deg);
     }
@@ -130,7 +128,7 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      font-size: 18px;  /* 수정: 글씨 크기 확대 */
+      font-size: 18px;
       padding: 5px;
     }
     .card-front {
@@ -146,13 +144,49 @@
     .matched {
       visibility: hidden;
     }
-    /* 깜박임 애니메이션 */
     @keyframes blink {
       0%, 100% { opacity: 1; }
       50% { opacity: 0; }
     }
     .blink {
       animation: blink 0.5s ease-in-out infinite;
+    }
+    
+    /* 반응형 조정을 위한 미디어 쿼리 (예시) */
+    @media (max-width: 1280px) {
+      #game-board {
+        grid-template-columns: repeat(4, 250px);
+      }
+      .card {
+        width: 250px;
+        height: 130px;
+      }
+      .card-face {
+        font-size: 16px;
+      }
+      .team-circle {
+        width: 60px;
+        height: 60px;
+        font-size: 12px;
+      }
+    }
+    
+    @media (max-width: 800px) {
+      #game-board {
+        grid-template-columns: repeat(4, 200px);
+      }
+      .card {
+        width: 200px;
+        height: 110px;
+      }
+      .card-face {
+        font-size: 14px;
+      }
+      .team-circle {
+        width: 50px;
+        height: 50px;
+        font-size: 10px;
+      }
     }
   </style>
 </head>
