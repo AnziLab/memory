@@ -85,7 +85,7 @@
     /* 메모리 카드 보드 */
     #game-board {
       display: grid;
-      grid-template-columns: repeat(4, 120px);
+      grid-template-columns: repeat(4, 300px); /* 수정: 카드 가로 길이에 맞춤 */
       gap: 10px;
       padding: 10px;
       background: rgba(255, 255, 255, 0.9);
@@ -104,8 +104,8 @@
     
     /* 카드 스타일 */
     .card {
-      width: 120px;
-      height: 80px;
+      width: 300px;    /* 수정: 가로 크기 증가 */
+      height: 100px;   /* 수정: 높이 약간 증가 */
       perspective: 800px;
       cursor: pointer;
     }
@@ -130,7 +130,7 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      font-size: 14px;
+      font-size: 18px;  /* 수정: 글씨 크기 확대 */
       padding: 5px;
     }
     .card-front {
