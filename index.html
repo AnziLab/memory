@@ -330,6 +330,7 @@
         if (firstCard && secondCard && firstCard.cardInfo.id === secondCard.cardInfo.id) {
           return;
         }
+        // 다음 팀으로 넘어갈 때 시작 팀부터 순서대로
         currentTeamIndex = (currentTeamIndex + 1) % teams.length;
       } else {
         // 팀당 한 번씩 돌아가는 모드
@@ -341,7 +342,7 @@
         if (firstCard && secondCard && firstCard.cardInfo.id === secondCard.cardInfo.id) {
           return;
         }
-        // 다음 팀 선택
+        // 다음 팀 선택 (시작 팀부터 순서대로)
         const currentTeam = remainingTeams.shift();
         currentTeamIndex = teams.indexOf(currentTeam);
       }
@@ -437,7 +438,16 @@
         animateMatch();
         matchedCount++;
         if (matchedCount === totalPairs) {
-          document.getElementById("message").textContent = "축하합니다! 모든 카드를 맞추셨습니다.";
+          // 승자 찾기
+          const maxScore = Math.max(...teams.map(team => team.score));
+          const winners = teams.filter(team => team.score === maxScore);
+          let message = "승자는 ";
+          if (winners.length === 1) {
+            message += winners[0].name + "입니다!";
+          } else {
+            message += winners.map(team => team.name).join(", ") + "입니다!";
+          }
+          document.getElementById("message").textContent = message;
         }
       } else {
         setTimeout(() => {
@@ -472,7 +482,11 @@
         });
       }
       currentTeamIndex = parseInt(document.getElementById("startingTeam").value);
-      remainingTeams = [...teams]; // rotation 모드를 위한 초기화
+      // rotation 모드를 위한 초기화 - 시작 팀부터 순서대로 배열 재정렬
+      remainingTeams = [...teams];
+      // 시작 팀을 첫 번째로 오도록 재정렬
+      const startTeam = remainingTeams.splice(currentTeamIndex, 1)[0];
+      remainingTeams.unshift(startTeam);
       matchedCount = 0;
       updateTeamsDisplay();
       document.getElementById("playerSelectOverlay").style.display = "none";
